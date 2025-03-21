@@ -24,6 +24,37 @@ const BudgetAlerts = () => {
   const [userEmail, setUserEmail] = useState(""); // User email will be set from localStorage or other source
   const [emailSent, setEmailSent] = useState(false);
 
+  const sendBudgetAlert = async (totalBudget, totalSpent) => {
+  try {
+    console.log("Sending budget alert email...");
+    
+    const response = await fetch('/api/sendEmails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userEmail: "alfredshajan0@gmail.com",  // Static email
+        userName: "Alf Sha",           // Static name
+        totalBudget,                     // Dynamic budget
+        totalSpent                        // Dynamic spent amount
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      console.log("Email sent successfully:", data);
+      setEmailSent(true); // Set flag to prevent repeated emails
+      localStorage.setItem("lastEmailAlert", new Date().toISOString()); // Prevent repeat alerts
+    } else {
+      console.error("Failed to send email:", data);
+    }
+  } catch (error) {
+    console.error("Error sending budget alert:", error);
+  }
+};
+
   // Get current month and handle month change
   useEffect(() => {
     const now = new Date();
@@ -130,37 +161,9 @@ const BudgetAlerts = () => {
             type: "danger",
             percentage
           });
+          sendBudgetAlert(budget, spent);
 
-          const sendBudgetAlert = async () => {
-            try {
-              console.log("Sending budget alert email...");
-              
-              const response = await fetch('/api/sendEmails', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  userEmail,
-                  userName,
-                  totalBudget,
-                  totalSpent
-                }),
-              });
-              
-              
-              if (response.ok) {
-                console.log("Email sent successfully:", data);
-                setEmailSent(true); // Set flag to prevent repeated emails
-                // Store the date of the last alert to prevent repeat alerts
-                localStorage.setItem("lastEmailAlert", new Date().toISOString());
-              } else {
-                console.error("Failed to send email:", data);
-              }
-            } catch (error) {
-              console.error("Error sending budget alert:", error);
-            }
-          };
+          
         } else if (percentage >= 90) {
           newAlerts.push({
             category: item.category,
@@ -169,36 +172,8 @@ const BudgetAlerts = () => {
             percentage
           });
 
-          const sendBudgetAlert = async () => {
-            try {
-              console.log("Sending budget alert email...");
-              
-              const response = await fetch('/api/sendEmails', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  userEmail,
-                  userName,
-                  totalBudget,
-                  totalSpent
-                }),
-              });
-              
-              
-              if (response.ok) {
-                console.log("Email sent successfully:", data);
-                setEmailSent(true); // Set flag to prevent repeated emails
-                // Store the date of the last alert to prevent repeat alerts
-                localStorage.setItem("lastEmailAlert", new Date().toISOString());
-              } else {
-                console.error("Failed to send email:", data);
-              }
-            } catch (error) {
-              console.error("Error sending budget alert:", error);
-            }
-          };
+          sendBudgetAlert(budget, spent);
+
         } else if (percentage >= 75) {
           newAlerts.push({
             category: item.category,

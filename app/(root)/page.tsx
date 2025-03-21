@@ -6,6 +6,7 @@ import BudgetProgress from './test/_components/BudgetProgress ';
 import SpendingCategories from './test/_components/SpendingCategories ';
 import { getAccount, getAccounts } from '@/lib/actions/bank.actions';
 import { getLoggedInUser } from '@/lib/actions/user.actions';
+import RedAlert from './test/_components/RedAlert';
 
 const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
   const currentPage = Number(page as string) || 1;
@@ -26,8 +27,13 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
     : 0;
     console.log('real total balance',accounts?.totalCurrentBalance)
 
+    const highValueTransaction =account?.transactions?.some((txn) => txn.amount > 50);
+    //  account?.transactions?.some((txn) => txn.amount > 1000);
+
   return (
     <section className="home">
+      {/* 🚨 Red Alert Appears if a transaction > $1000 is detected */}
+      {highValueTransaction && <RedAlert message="🚨 High-value transaction detected! Review immediately!" />}
       <div className="home-content">
         <header className="home-header">
           <HeaderBox 
