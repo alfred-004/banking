@@ -1,11 +1,11 @@
-"use client"; // Ensure this is at the top
+"use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Card } from "@/components/ui/card";
 import BudgetForm from "./BudgetForm";
 
-const budgetData = [
+const defaultBudgetData = [
   { category: "Groceries", spent: 450, budget: 500 },
   { category: "Entertainment", spent: 120, budget: 100 },
   { category: "Transport", spent: 80, budget: 150 },
@@ -19,51 +19,175 @@ const alerts = [
 ];
 
 const BudgetAlerts = () => {
-  const totalBudget = budgetData.reduce((acc, item) => acc + item.budget, 0);
-  const totalSpent = budgetData.reduce((acc, item) => acc + item.spent, 0);
+  const [budgetData, setBudgetData] = useState(defaultBudgetData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState("");
+  const [lastTrackedMonth, setLastTrackedMonth] = useState("");
+
+  // Get current month and handle month change
+  useEffect(() => {
+    const now = new Date();
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    const thisMonth = monthNames[now.getMonth()];
+    setCurrentMonth(thisMonth);
+    
+    // Check if we need to initialize lastTrackedMonth from localStorage
+    if (typeof window !== 'undefined' && !lastTrackedMonth) {
+      const storedMonth = localStorage.getItem("lastTrackedMonth");
+      if (storedMonth) {
+        setLastTrackedMonth(storedMonth);
+      } else {
+        // If no stored month, set current month as last tracked
+        setLastTrackedMonth(thisMonth);
+        localStorage.setItem("lastTrackedMonth", thisMonth);
+      }
+    }
+    
+    // If month has changed, reset spent values
+    if (lastTrackedMonth && thisMonth !== lastTrackedMonth && !isLoading) {
+      console.log(`Month changed from ${lastTrackedMonth} to ${thisMonth}, resetting budget spent values`);
+      
+      // Reset spent values while keeping budgets
+      const resetData = budgetData.map(item => ({
+        ...item,
+        spent: 0
+      }));
+      
+      setBudgetData(resetData);
+      setLastTrackedMonth(thisMonth);
+      localStorage.setItem("lastTrackedMonth", thisMonth);
+      
+      // Save the reset data to localStorage
+      localStorage.setItem("budgetData", JSON.stringify(resetData));
+    }
+  }, [lastTrackedMonth, budgetData, isLoading]);
+
+  // Load budget data from localStorage
+  useEffect(() => {
+    // Use setTimeout to ensure this runs client-side only
+    const loadData = () => {
+      try {
+        const storedData = localStorage.getItem("budgetData");
+        console.log("Fetched from localStorage:", storedData); // Debug log
+        
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          if (Array.isArray(parsedData) && parsedData.length > 0) {
+            // Validate the data to ensure spent and budget are numbers
+            const validatedData = parsedData.map(item => ({
+              category: item.category || "Unnamed",
+              spent: Number(item.spent) || 0,
+              budget: Number(item.budget) || 0
+            }));
+            setBudgetData(validatedData);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading budget data:", error);
+        // Fallback to default data on error
+        setBudgetData(defaultBudgetData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Ensure we're in a browser environment before accessing localStorage
+    if (typeof window !== 'undefined') {
+      loadData();
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Save to localStorage whenever budgetData changes
+  useEffect(() => {
+    if (!isLoading && typeof window !== 'undefined') {
+      try {
+        // Ensure we're storing valid number values
+        const dataToStore = budgetData.map(item => ({
+          category: item.category,
+          spent: Number(item.spent) || 0,
+          budget: Number(item.budget) || 0
+        }));
+        localStorage.setItem("budgetData", JSON.stringify(dataToStore));
+        console.log("Saved to localStorage:", dataToStore);
+      } catch (error) {
+        console.error("Error saving budget data:", error);
+      }
+    }
+  }, [budgetData, isLoading]);
+
+  const totalBudget = budgetData.reduce((acc, item) => acc + (Number(item.budget) || 0), 0);
+  const totalSpent = budgetData.reduce((acc, item) => acc + (Number(item.spent) || 0), 0);
   const remainingBudget = totalBudget - totalSpent;
 
   const pieChartData = [
     { name: "Spent", value: totalSpent },
-    { name: "Remaining", value: remainingBudget },
+    { name: "Remaining", value: remainingBudget > 0 ? remainingBudget : 0 },
   ];
 
   const COLORS = ["#4F46E5", "#10B981"];
-  
+
   // Calculate percentage for each category
-  const categoryData = budgetData.map(item => ({
-    ...item,
-    percentage: Math.round((item.spent / item.budget) * 100)
-  }));
+  const categoryData = budgetData.map(item => {
+    const spent = Number(item.spent) || 0;
+    const budget = Number(item.budget) || 1; // Avoid division by zero
+    return {
+      ...item,
+      spent,
+      budget,
+      percentage: Math.round((spent / budget) * 100)
+    };
+  });
+
+  // Handle dismissing an alert
+  const [activeAlerts, setActiveAlerts] = useState(alerts);
+  const dismissAlert = (index) => {
+    setActiveAlerts(activeAlerts.filter((_, i) => i !== index));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your budget data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">💰 Budget Alerts</h1>
-          <p className="text-gray-600">Track your expenses and stay within budget.</p>
+          <p className="text-gray-600">Track your expenses and stay within budget for <span className="font-medium">{currentMonth}</span>.</p>
         </header>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6 border-l-4 border-blue-500 shadow-sm">
             <h3 className="text-sm font-medium text-gray-500 mb-1">Total Budget</h3>
-            <p className="text-2xl font-bold text-gray-800">${totalBudget}</p>
+            <p className="text-2xl font-bold text-gray-800">${totalBudget.toFixed(2)}</p>
           </Card>
           <Card className="p-6 border-l-4 border-indigo-500 shadow-sm">
             <h3 className="text-sm font-medium text-gray-500 mb-1">Total Spent</h3>
-            <p className="text-2xl font-bold text-gray-800">${totalSpent}</p>
+            <p className="text-2xl font-bold text-gray-800">${totalSpent.toFixed(2)}</p>
           </Card>
           <Card className="p-6 border-l-4 border-green-500 shadow-sm">
             <h3 className="text-sm font-medium text-gray-500 mb-1">Remaining</h3>
-            <p className="text-2xl font-bold text-gray-800">${remainingBudget}</p>
+            <p className="text-2xl font-bold text-gray-800">${remainingBudget.toFixed(2)}</p>
           </Card>
         </div>
 
         {/* Budget Overview */}
         <Card className="p-6 shadow-sm mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">📊 Current Budget Usage</h2>
-          <div className="flex flex-col md:flex-row items-center gap-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">📊 {currentMonth} Budget Usage</h2>
+          <div className="flex flex-col md:flex-row items-start gap-8">
             <div className="w-full md:w-1/3">
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
@@ -82,7 +206,7 @@ const BudgetAlerts = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `$${value}`} />
+                  <Tooltip formatter={(value) => `$${Number(value).toFixed(2)}`} />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
@@ -112,8 +236,8 @@ const BudgetAlerts = () => {
                     ></div>
                   </div>
                   <div className="flex justify-between mt-2 text-sm text-gray-600">
-                    <span>${item.spent} spent</span>
-                    <span>${item.budget} budget</span>
+                    <span>${Number(item.spent).toFixed(2)} spent</span>
+                    <span>${Number(item.budget).toFixed(2)} budget</span>
                   </div>
                 </div>
               ))}
@@ -122,38 +246,52 @@ const BudgetAlerts = () => {
         </Card>
 
         {/* Alerts Section */}
-        <Card className="p-6 shadow-sm">
+        <Card className="p-6 shadow-sm mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-800">🔔 Alerts</h2>
-            <span className="px-2 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">{alerts.length} Active</span>
+            <span className="px-2 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">{activeAlerts.length} Active</span>
           </div>
-          <div className="space-y-4">
-            {alerts.map((alert, index) => (
-              <div
-                key={index}
-                className={`p-4 rounded-lg border-l-4 shadow-sm flex items-start ${
-                  alert.type === "danger"
-                    ? "bg-red-50 border-red-500 text-red-800"
-                    : alert.type === "warning"
-                    ? "bg-yellow-50 border-yellow-500 text-yellow-800"
-                    : "bg-blue-50 border-blue-500 text-blue-800"
-                }`}
-              >
-                <div className="flex-1">
-                  {alert.message}
+          
+          {activeAlerts.length > 0 ? (
+            <div className="space-y-4">
+              {activeAlerts.map((alert, index) => (
+                <div
+                  key={index}
+                  className={`p-4 rounded-lg border-l-4 shadow-sm flex items-start ${
+                    alert.type === "danger"
+                      ? "bg-red-50 border-red-500 text-red-800"
+                      : alert.type === "warning"
+                      ? "bg-yellow-50 border-yellow-500 text-yellow-800"
+                      : "bg-blue-50 border-blue-500 text-blue-800"
+                  }`}
+                >
+                  <div className="flex-1">
+                    {alert.message}
+                  </div>
+                  <button 
+                    className="text-gray-400 hover:text-gray-600"
+                    onClick={() => dismissAlert(index)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
                 </div>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No active alerts at this time.</p>
+            </div>
+          )}
+        </Card>
+
+        {/* Budget Form */}
+        <Card className="p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">✏️ Update Your {currentMonth} Budget</h2>
+          <BudgetForm setBudgetData={setBudgetData} currentData={budgetData} />
         </Card>
       </div>
-
-      <BudgetForm/>
     </div>
   );
 };

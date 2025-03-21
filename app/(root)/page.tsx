@@ -58,7 +58,7 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
     { id: 3, category: "Entertainment", amount: 100 },
     { id: 4, category: "Groceries", amount: 200 },
     { id: 5, category: "Bills", amount: 300 },
-    { id: 6, category: "Dining", amount: 80 },
+    { id: 6, category: "Miscellaneous", amount: 80 },
     { id: 7, category: "Transport", amount: 40 },
     { id: 8, category: "Shopping", amount: 250 },
     { id: 9, category: "Bills", amount: 150 },

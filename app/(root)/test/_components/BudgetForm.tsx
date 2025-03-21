@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,26 @@ const defaultCategories = [
   { category: "Shopping", budget: 250 },
 ];
 
-const BudgetForm = () => {
+const BudgetForm = ({ setBudgetData }) => {
   const [budgets, setBudgets] = useState(defaultCategories);
+
+  // Load budget data from localStorage
+  useEffect(() => {
+    const storedBudgets = localStorage.getItem("budgetData");
+    if (storedBudgets) {
+      setBudgets(JSON.parse(storedBudgets));
+    }
+  }, []);
 
   const handleBudgetChange = (index: number, value: number) => {
     const updatedBudgets = [...budgets];
     updatedBudgets[index].budget = value;
     setBudgets(updatedBudgets);
+  };
+
+  const saveBudget = () => {
+    localStorage.setItem("budgetData", JSON.stringify(budgets));
+    setBudgetData(budgets);
   };
 
   return (
@@ -38,7 +51,9 @@ const BudgetForm = () => {
         ))}
       </div>
 
-      <Button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg">Save Budget</Button>
+      <Button onClick={saveBudget} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg">
+        Save Budget
+      </Button>
     </Card>
   );
 };
