@@ -20,6 +20,13 @@ const RecentTransactions = ({
   const currentTransactions = transactions.slice(
     indexOfFirstTransaction, indexOfLastTransaction
   )
+  const sampleTransactions = [
+    { id: 1, name: "Grocery Shopping", amount: 120, date: "2024-03-20", type: "debit", paymentChannel: "Card", category: "Groceries" },
+    { id: 2, name: "Uber Ride", amount: 15, date: "2024-03-18", type: "debit", paymentChannel: "Wallet", category: "Transport" },
+    { id: 3, name: "Salary Credit", amount: 2000, date: "2024-03-15", type: "credit", paymentChannel: "Bank Transfer", category: "Income" },
+    { id: 4, name: "Netflix Subscription", amount: 10, date: "2024-03-10", type: "debit", paymentChannel: "Card", category: "Entertainment" },
+    { id: 5, name: "Electricity Bill", amount: 50, date: "2024-03-07", type: "debit", paymentChannel: "UPI", category: "Bills" },
+  ];
 
   return (
     <section className="recent-transactions">
@@ -58,7 +65,7 @@ const RecentTransactions = ({
               type="full"
             />
 
-            <TransactionsTable transactions={currentTransactions} />
+<TransactionsTable transactions={sampleTransactions} />;
             
 
             {totalPages > 1 && (

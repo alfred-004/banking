@@ -48,6 +48,21 @@ const Sidebar = ({ user }: SiderbarProps) => {
             </Link>
           )
         })}
+
+        {/* Budget Alerts Section */}
+        <Link href="/test" className={cn('sidebar-link', { 'bg-bank-gradient': pathname === "/test" })}>
+          <div className="relative size-6">
+            <Image 
+              src="/icons/budget-alerts.svg" // Replace with actual icon
+              alt="Budget Alerts"
+              fill
+              className={cn({ 'brightness-[3] invert-0': pathname === "/test" })}
+            />
+          </div>
+          <p className={cn("sidebar-label", { "!text-white": pathname === "/test" })}>
+            Budget Alerts
+          </p>
+        </Link>
         
         <PlaidLink user={user} />
       </nav>
