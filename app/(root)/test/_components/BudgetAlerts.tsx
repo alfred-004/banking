@@ -20,6 +20,9 @@ const BudgetAlerts = () => {
   const [currentMonth, setCurrentMonth] = useState("");
   const [lastTrackedMonth, setLastTrackedMonth] = useState("");
   const [dynamicAlerts, setDynamicAlerts] = useState([]);
+  const [userName, setUserName] = useState("User"); // Default user name
+  const [userEmail, setUserEmail] = useState(""); // User email will be set from localStorage or other source
+  const [emailSent, setEmailSent] = useState(false);
 
   // Get current month and handle month change
   useEffect(() => {
@@ -41,6 +44,13 @@ const BudgetAlerts = () => {
         setLastTrackedMonth(thisMonth);
         localStorage.setItem("lastTrackedMonth", thisMonth);
       }
+
+      // Get user data from localStorage
+      const storedUserName = localStorage.getItem("userName");
+      const storedUserEmail = localStorage.getItem("userEmail");
+      if (storedUserName) setUserName(storedUserName);
+      if (storedUserEmail) setUserEmail(storedUserEmail);
+      else setUserEmail("user@example.com"); // Fallback email for testing
     }
     
     // If month has changed, reset spent values
@@ -59,6 +69,9 @@ const BudgetAlerts = () => {
       
       // Save the reset data to localStorage
       localStorage.setItem("budgetData", JSON.stringify(resetData));
+      
+      // Reset email sent flag for the new month
+      setEmailSent(false);
     }
   }, [lastTrackedMonth, budgetData, isLoading]);
 
@@ -117,6 +130,37 @@ const BudgetAlerts = () => {
             type: "danger",
             percentage
           });
+
+          const sendBudgetAlert = async () => {
+            try {
+              console.log("Sending budget alert email...");
+              
+              const response = await fetch('/api/sendEmails', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userEmail,
+                  userName,
+                  totalBudget,
+                  totalSpent
+                }),
+              });
+              
+              
+              if (response.ok) {
+                console.log("Email sent successfully:", data);
+                setEmailSent(true); // Set flag to prevent repeated emails
+                // Store the date of the last alert to prevent repeat alerts
+                localStorage.setItem("lastEmailAlert", new Date().toISOString());
+              } else {
+                console.error("Failed to send email:", data);
+              }
+            } catch (error) {
+              console.error("Error sending budget alert:", error);
+            }
+          };
         } else if (percentage >= 90) {
           newAlerts.push({
             category: item.category,
@@ -124,6 +168,37 @@ const BudgetAlerts = () => {
             type: "warning",
             percentage
           });
+
+          const sendBudgetAlert = async () => {
+            try {
+              console.log("Sending budget alert email...");
+              
+              const response = await fetch('/api/sendEmails', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userEmail,
+                  userName,
+                  totalBudget,
+                  totalSpent
+                }),
+              });
+              
+              
+              if (response.ok) {
+                console.log("Email sent successfully:", data);
+                setEmailSent(true); // Set flag to prevent repeated emails
+                // Store the date of the last alert to prevent repeat alerts
+                localStorage.setItem("lastEmailAlert", new Date().toISOString());
+              } else {
+                console.error("Failed to send email:", data);
+              }
+            } catch (error) {
+              console.error("Error sending budget alert:", error);
+            }
+          };
         } else if (percentage >= 75) {
           newAlerts.push({
             category: item.category,
@@ -131,6 +206,37 @@ const BudgetAlerts = () => {
             type: "caution",
             percentage
           });
+
+          const sendBudgetAlert = async () => {
+            try {
+              console.log("Sending budget alert email...");
+              
+              const response = await fetch('/api/sendEmails', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userEmail,
+                  userName,
+                  totalBudget,
+                  totalSpent
+                }),
+              });
+              
+              
+              if (response.ok) {
+                console.log("Email sent successfully:", data);
+                setEmailSent(true); // Set flag to prevent repeated emails
+                // Store the date of the last alert to prevent repeat alerts
+                localStorage.setItem("lastEmailAlert", new Date().toISOString());
+              } else {
+                console.error("Failed to send email:", data);
+              }
+            } catch (error) {
+              console.error("Error sending budget alert:", error);
+            }
+          };
         }
         
         // Check for unusual spending patterns (optional)
@@ -174,6 +280,42 @@ const BudgetAlerts = () => {
   const totalBudget = budgetData.reduce((acc, item) => acc + (Number(item.budget) || 0), 0);
   const totalSpent = budgetData.reduce((acc, item) => acc + (Number(item.spent) || 0), 0);
   const remainingBudget = totalBudget - totalSpent;
+
+  // Send alert email if budget is exceeded
+  useEffect(() => {
+    if (!isLoading && !emailSent && totalSpent > totalBudget && userEmail) {
+      sendBudgetAlert();
+    }
+  }, [totalSpent, totalBudget, isLoading, emailSent, userEmail]);
+
+  // Function to send alert to backend API
+  
+
+  // Function to manually trigger alert email
+  const triggerManualAlert = () => {
+    setEmailSent(false); // Reset the flag to allow sending
+    sendBudgetAlert();
+  };
+
+  // Check the API status when component loads
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      try {
+        const response = await fetch('/api/email', {
+          method: 'GET',
+        });
+        
+        const data = await response.json();
+        console.log("API status check response:", data);
+      } catch (error) {
+        console.error("Error checking API status:", error);
+      }
+    };
+    
+    if (typeof window !== 'undefined' && !isLoading) {
+      checkApiStatus();
+    }
+  }, [isLoading]);
 
   const pieChartData = [
     { name: "Spent", value: totalSpent },
@@ -239,6 +381,19 @@ const BudgetAlerts = () => {
           <Card className="p-6 border-l-4 border-green-500 shadow-sm">
             <h3 className="text-sm font-medium text-gray-500 mb-1">Remaining</h3>
             <p className="text-2xl font-bold text-gray-800">${remainingBudget.toFixed(2)}</p>
+            {totalSpent > totalBudget && (
+              <div className="mt-2">
+                <button 
+                  onClick={triggerManualAlert}
+                  className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                >
+                  {emailSent ? "Resend Alert" : "Send Alert"}
+                </button>
+                {emailSent && (
+                  <span className="text-xs text-gray-500 ml-2">Alert sent</span>
+                )}
+              </div>
+            )}
           </Card>
         </div>
 
