@@ -22,7 +22,7 @@ const Sidebar = ({ user }: SiderbarProps) => {
             alt="Horizon logo"
             className="size-[24px] max-xl:size-14"
           />
-          <h1 className="sidebar-logo">Horizon</h1>
+          <h1 className="sidebar-logo">Bank-Flow</h1>
         </Link>
 
         {sidebarLinks.map((item) => {
@@ -63,7 +63,19 @@ const Sidebar = ({ user }: SiderbarProps) => {
             Budget Alerts
           </p>
         </Link>
-        
+        <Link href="/forecast" className={cn('sidebar-link', { 'bg-bank-gradient': pathname === "/forecast" })}>
+          <div className="relative size-6">
+            <Image 
+              src="/icons/prediction.svg" // Replace with actual icon
+              alt="Budget Alerts"
+              fill
+              className={cn({ 'brightness-[3] invert-0': pathname === "/forecast" })}
+            />
+          </div>
+          <p className={cn("sidebar-label", { "!text-white": pathname === "/forecast" })}>
+            Predictions
+          </p>
+        </Link>
         <PlaidLink user={user} />
       </nav>
 
